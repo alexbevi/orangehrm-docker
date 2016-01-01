@@ -1,21 +1,36 @@
-FROM php:5.6-apache
+FROM ubuntu:14.04
+MAINTAINER Orangehrm <samanthaj@orangehrm.com>
 
+RUN apt-get update
+RUN apt-get -y upgrade
+
+# Install apache, PHP, and supplimentary programs. curl and lynx-cur are for debugging the container.
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y install apache2 mysql-server libapache2-mod-php5 php5-mysql php5-gd php-pear php-apc php5-curl curl lynx-cur wget unzip
+
+# Enable apache mods.
+RUN a2enmod php5
 RUN a2enmod rewrite
 
-# install the PHP extensions we need
-RUN apt-get update && apt-get install -y libpng12-dev libjpeg-dev libpq-dev \
-	&& rm -rf /var/lib/apt/lists/* \
-	&& docker-php-ext-configure gd --with-png-dir=/usr --with-jpeg-dir=/usr \
-	&& docker-php-ext-install gd mbstring pdo pdo_mysql pdo_pgsql zip
+# Manually set up the apache environment variables
+ENV APACHE_RUN_USER www-data
+ENV APACHE_RUN_GROUP www-data
+ENV APACHE_LOG_DIR /var/log/apache2
+ENV APACHE_LOCK_DIR /var/lock/apache2
+ENV APACHE_PID_FILE /var/run/apache2.pid
 
-WORKDIR /var/www/html
+# Export port 80
+EXPOSE 80
 
-ENV ORANGEHRM_VERSION 3.3.2
-
-#Download source
-RUN mkdir /var/www/html/site
+# Download the source
 RUN wget -c http://downloads.sourceforge.net/project/orangehrm/stable/3.3.2/orangehrm-3.3.2.zip -O ~/orangehrm-3.3.2.zip &&\
-    unzip -o ~/orangehrm-3.3.2.zip -d /var/www/html/site && \
+    unzip -o ~/orangehrm-3.3.2.zip -d /var/www/site && \
     rm ~/orangehrm-3.3.2.zip
 
-RUN cd /var/www/html/site; bash fix_permissions.sh
+# Fix Permission
+RUN cd /var/www/site/orangehrm-3.3.2; bash fix_permissions.sh
+
+# Update the default apache site with the config we created.
+ADD apache-config.conf /etc/apache2/sites-enabled/000-default.conf
+
+# By default, simply start apache.
+CMD /usr/sbin/apache2ctl -D FOREGROUND
