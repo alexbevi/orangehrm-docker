@@ -31,6 +31,9 @@ RUN cd /var/www/site/orangehrm-3.3.2; bash fix_permissions.sh
 
 # Update the default apache site with the config we created.
 ADD apache-config.conf /etc/apache2/sites-enabled/000-default.conf
+
+# Copy Supervisor configuration
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Start apache/mysql
 CMD /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
